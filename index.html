@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Drive Video Library</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    h1 {
+      text-align: center;
+    }
+    #controls {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #controls input {
+      width: 60%;
+      max-width: 500px;
+      padding: 8px;
+      font-size: 14px;
+    }
+    #controls button {
+      padding: 8px 12px;
+      font-size: 14px;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+    #videoContainer {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    iframe {
+      width: 960px;
+      height: 540px;
+      border: none;
+    }
+    #playlist {
+      max-width: 960px;
+      margin: 0 auto;
+      list-style: none;
+      padding: 0;
+    }
+    #playlist li {
+      background: #fff;
+      margin: 6px 0;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 4px;
+    }
+    #playlist button {
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>My Drive Video Library</h1>
+
+  <div id="controls">
+    <input id="videoInput" placeholder="Paste Drive URL or File ID…">
+    <button onclick="addVideo()">Add to Library</button>
+  </div>
+
+  <div id="videoContainer">
+    <!-- iframe will be injected here -->
+  </div>
+
+  <ul id="playlist">
+    <!-- saved videos will be listed here -->
+  </ul>
+
+  <script>
+    const STORAGE_KEY = 'myDriveVideos';
+
+    // read saved list from localStorage (or start empty)
+    function getSaved() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+
+    // write list back to localStorage
+    function saveList(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    // extract fileId from URL or ID
+    function extractId(input) {
+      const m = input.match(/[-\w]{25,}/);
+      return m ? m[0] : null;
+    }
+
+    // render the playlist below
+    function renderPlaylist() {
+      const listEl = document.getElementById('playlist');
+      listEl.innerHTML = '';
+      const videos = getSaved();
+      if (!videos.length) {
+        listEl.innerHTML = '<li>No videos saved yet.</li>';
+        return;
+      }
+      videos.forEach((fileId, idx) => {
+        const li = document.createElement('li');
+        li.textContent = fileId;
+        // "Watch" button
+        const watchBtn = document.createElement('button');
+        watchBtn.textContent = 'Watch';
+        watchBtn.onclick = () => loadVideo(fileId);
+        // "Delete" button
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => {
+          const updated = getSaved().filter((_, i) => i !== idx);
+          saveList(updated);
+          renderPlaylist();
+        };
+        li.appendChild(watchBtn);
+        li.appendChild(delBtn);
+        listEl.appendChild(li);
+      });
+    }
+
+    // inject the iframe
+    function loadVideo(fileId) {
+      const url = `https://drive.google.com/file/d/${fileId}/preview`;
+      document.getElementById('videoContainer').innerHTML =
+        `<iframe src="${url}" allow="autoplay; fullscreen"></iframe>`;
+    }
+
+    // handler for "Add to Library"
+    function addVideo() {
+      const raw = document.getElementById('videoInput').value.trim();
+      const fileId = extractId(raw);
+      if (!fileId) {
+        return alert('Please enter a valid Drive URL or File ID.');
+      }
+      const list = getSaved();
+      if (list.includes(fileId)) {
+        return alert('This video is already in your library.');
+      }
+      list.push(fileId);
+      saveList(list);
+      renderPlaylist();
+      document.getElementById('videoInput').value = '';
+      loadVideo(fileId);
+    }
+
+    // initial render on page load
+    renderPlaylist();
+  </script>
+
+</body>
+</html>
